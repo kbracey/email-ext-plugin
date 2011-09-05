@@ -20,6 +20,7 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 /**
  * These settings are global configurations
@@ -94,12 +95,22 @@ public class ExtendedEmailPublisherDescriptor extends BuildStepDescriptor<Publis
      */
     private long maxAttachmentSize = -1;
 
+    /**
+     * The maximum number of non-manually-specified recipients.
+     */
+    private long maxOtherRecipients = -1;
+
     private boolean overrideGlobalSettings;
     
     /**
      * If non-null, set a List-ID email header.
      */
     private String listId;
+    
+    /**
+     * A regex for non-manually-specified recipients to be matched against.
+     */
+    private String validOtherRecipients = "";
 
     private boolean precedenceBulk;
 
@@ -219,6 +230,14 @@ public class ExtendedEmailPublisherDescriptor extends BuildStepDescriptor<Publis
     public long getMaxAttachmentSizeMb() {
     	return maxAttachmentSize / (1024 * 1024);
     }
+    
+    public long getMaxOtherRecipients() {
+    	return maxOtherRecipients;
+    }
+
+    public String getValidOtherRecipients() {
+    	return validOtherRecipients;
+    }
 
     public boolean getOverrideGlobalSettings() {
         return overrideGlobalSettings;
@@ -328,10 +347,14 @@ public class ExtendedEmailPublisherDescriptor extends BuildStepDescriptor<Publis
         defaultBody = nullify(req.getParameter("ext_mailer_default_body"));
         recipientList = nullify(req.getParameter("ext_mailer_default_recipients")) != null ?
         	req.getParameter("ext_mailer_default_recipients") : "";
+        validOtherRecipients = nullify(req.getParameter("ext_mailer_valid_other_recipients"));
         
         // convert the value into megabytes (1024 * 1024 bytes)
         maxAttachmentSize = nullify(req.getParameter("ext_mailer_max_attachment_size")) != null ?
         	(Long.parseLong(req.getParameter("ext_mailer_max_attachment_size")) * 1024 * 1024) : -1;
+
+        maxOtherRecipients = nullify(req.getParameter("ext_mailer_max_other_recipients")) != null ?
+            Long.parseLong(req.getParameter("ext_mailer_max_other_recipients")) : -1;
         
         overrideGlobalSettings = req.getParameter("ext_mailer_override_global_settings") != null;
 
@@ -384,6 +407,32 @@ public class ExtendedEmailPublisherDescriptor extends BuildStepDescriptor<Publis
     		if(testValue.length() > 0) {
     			Long.parseLong(testValue);
     		}
+    		return FormValidation.ok();
+    	} catch (Exception e) {
+    		return FormValidation.error(e.getMessage());
+    	}
+    }
+    
+    public FormValidation doMaxOtherRecipientsCheck(@QueryParameter final String value)
+    		throws IOException, ServletException {
+    	try {
+    		String testValue = value.trim();
+    		// we support an empty value (which means default)
+    		// or a number
+    		if(testValue.length() > 0) {
+    			Long.parseLong(testValue);
+    		}
+    		return FormValidation.ok();
+    	} catch (Exception e) {
+    		return FormValidation.error(e.getMessage());
+    	}
+    }
+    
+    public FormValidation doValidOtherRecipientsCheck(@QueryParameter final String value)
+    		throws IOException, ServletException {
+    	try {
+    		String testValue = value.trim();
+    		Pattern.compile(testValue);
     		return FormValidation.ok();
     	} catch (Exception e) {
     		return FormValidation.error(e.getMessage());

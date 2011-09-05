@@ -54,12 +54,14 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 /**
  * {@link Publisher} that sends notification e-mail.
@@ -308,11 +310,8 @@ public class ExtendedEmailPublisher extends Notifier {
 
         EnvVars env = build.getEnvironment(listener);
 
-        // Get the recipients from the global list of addresses
         Set<InternetAddress> recipientAddresses = new LinkedHashSet<InternetAddress>();
-        if (type.getSendToRecipientList()) {
-            addAddressesFromRecipientList(recipientAddresses, getRecipientList(type, build, charset), env, listener);
-        }
+
         // Get the list of developers who made changes between this build and the last
         // if this mail type is configured that way
         if (type.getSendToDevelopers()) {
@@ -358,7 +357,30 @@ public class ExtendedEmailPublisher extends Notifier {
             }
         }
 
-        //Get the list of recipients that are uniquely specified for this type of email
+        // Validate all recipients against the approved pattern
+        if (ExtendedEmailPublisher.DESCRIPTOR.getValidOtherRecipients() != null) {
+            Pattern recipientPattern = Pattern.compile(ExtendedEmailPublisher.DESCRIPTOR.getValidOtherRecipients());
+            Iterator<InternetAddress> it = recipientAddresses.iterator();
+            while (it.hasNext()) {
+            	InternetAddress adr = it.next();
+            	if (!recipientPattern.matcher(adr.toString()).matches()) {
+            		it.remove();
+                    listener.getLogger().println("Did not send e-mail to " + adr + " because it didn't match pattern");
+            	}
+            }
+        }
+
+        // If we exceeded the maximum number of recipients, assume it's gone wrong,
+        // and we will send only to those manually specified
+        if (recipientAddresses.size() > ExtendedEmailPublisher.DESCRIPTOR.getMaxOtherRecipients()) {
+        	recipientAddresses.clear();
+        }
+
+        // Get the recipients from the global list of addresses
+        if (type.getSendToRecipientList()) {
+            addAddressesFromRecipientList(recipientAddresses, getRecipientList(type, build, charset), env, listener);
+        }
+        // Get the list of recipients that are uniquely specified for this type of email
         if (type.getRecipientList() != null && type.getRecipientList().trim().length() > 0) {
             addAddressesFromRecipientList(recipientAddresses, getRecipientList(type, build, charset), env, listener);
         }
