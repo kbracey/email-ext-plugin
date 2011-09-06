@@ -108,9 +108,9 @@ public class ExtendedEmailPublisherDescriptor extends BuildStepDescriptor<Publis
     private String listId;
     
     /**
-     * A regex for non-manually-specified recipients to be matched against.
+     * If non-null, a regex for non-manually-specified recipients to be matched against.
      */
-    private String validOtherRecipients = "";
+    private String validOtherRecipients;
 
     private boolean precedenceBulk;
 
@@ -432,7 +432,11 @@ public class ExtendedEmailPublisherDescriptor extends BuildStepDescriptor<Publis
     		throws IOException, ServletException {
     	try {
     		String testValue = value.trim();
-    		Pattern.compile(testValue);
+    		// we support an empty value (which means default)
+    		// or a regex pattern
+    		if (testValue.length() > 0) {
+    		    Pattern.compile(testValue);
+    		}
     		return FormValidation.ok();
     	} catch (Exception e) {
     		return FormValidation.error(e.getMessage());

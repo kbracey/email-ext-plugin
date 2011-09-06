@@ -358,7 +358,8 @@ public class ExtendedEmailPublisher extends Notifier {
 
         // If we exceeded the maximum number of recipients, assume it's gone wrong,
         // and we will send only to those manually specified
-        if (recipientAddresses.size() > ExtendedEmailPublisher.DESCRIPTOR.getMaxOtherRecipients()) {
+        if (ExtendedEmailPublisher.DESCRIPTOR.getMaxOtherRecipients() >= 0 &&
+            recipientAddresses.size() > ExtendedEmailPublisher.DESCRIPTOR.getMaxOtherRecipients()) {
         	recipientAddresses.clear();
         }
 
